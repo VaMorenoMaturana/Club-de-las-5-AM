@@ -53,6 +53,8 @@
           <button class="tab active" data-view="todayView">Hoy</button>
           <button class="tab" data-view="progressView">Mi avance</button>
           <button class="tab" data-view="historyView">Historial</button>
+          <button class="tab" data-view="scheduleView">Calendario</button>
+          <button class="tab" data-view="plansView">Rutinas</button>
           <button class="tab" data-view="settingsView">Ajustes</button>
         </nav>
 
@@ -160,6 +162,57 @@
           <div id="historyList" class="history-list"></div>
         </section>
 
+        <section id="scheduleView" class="view hidden">
+          <div class="section-heading"><div><div class="eyebrow">PLANIFICACIÓN FLEXIBLE</div><h2>Calendario de entrenamiento</h2></div></div>
+          <div class="panel">
+            <h3>Asignar una rutina a otro día</h3>
+            <p class="muted small">Elija una fecha y asigne la rutina que desea hacer. Esto modifica su planificación, no el historial de entrenamientos ya registrados.</p>
+            <div class="form-grid">
+              <div><label for="scheduleDate">Fecha</label><input id="scheduleDate" type="date"></div>
+              <div><label for="scheduleWorkout">Rutina</label><select id="scheduleWorkout"></select></div>
+            </div>
+            <button id="assignWorkoutBtn" class="primary full" type="button">Asignar rutina a esta fecha</button>
+            <button id="clearScheduleBtn" class="secondary full" type="button">Quitar rutina asignada a esta fecha</button>
+          </div>
+          <div class="panel">
+            <div class="section-heading"><div><h3>Esta semana</h3><p class="muted small">Puede cambiar los días según sus compromisos.</p></div><button id="resetWeekBtn" class="secondary" type="button">Restablecer semana</button></div>
+            <div id="weekSchedule" class="week-schedule"></div>
+          </div>
+          <div class="panel">
+            <h3>Plan semanal base</h3>
+            <p class="muted small">Seleccione qué rutinas quedan asignadas por defecto a cada día. Puede activar más días cuando esté preparado.</p>
+            <div id="weeklyDefaults" class="weekly-defaults"></div>
+            <button id="saveWeeklyDefaultsBtn" class="primary full" type="button">Guardar planificación semanal</button>
+          </div>
+        </section>
+
+        <section id="plansView" class="view hidden">
+          <div class="section-heading"><div><div class="eyebrow">ENTRENAMIENTO A SU MEDIDA</div><h2>Editor de rutinas</h2></div></div>
+          <div class="panel">
+            <h3>Elegir rutina</h3>
+            <label for="planEditorSelect">Rutina a editar</label>
+            <select id="planEditorSelect"></select>
+            <p class="muted small">Puede renombrar rutinas, agregar o quitar ejercicios y definir series, repeticiones y grupo muscular. Los cambios afectarán las sesiones futuras, no los registros históricos.</p>
+            <div class="form-grid">
+              <div><label for="planName">Nombre de rutina</label><input id="planName" type="text" placeholder="Ej. Miércoles — Torso"></div>
+              <div><label for="newExerciseName">Nombre del ejercicio nuevo</label><input id="newExerciseName" type="text" placeholder="Ej. Flexiones"></div>
+            </div>
+            <div class="form-grid">
+              <div><label for="newExercisePrescription">Series y repeticiones</label><input id="newExercisePrescription" type="text" placeholder="Ej. 3×10–12"></div>
+              <div><label for="newExerciseMuscle">Grupo muscular / nota</label><input id="newExerciseMuscle" type="text" placeholder="Ej. Pecho"></div>
+            </div>
+            <button id="addExerciseBtn" class="secondary full" type="button">Agregar ejercicio</button>
+            <div id="planExercises" class="plan-exercises"></div>
+            <button id="savePlanBtn" class="primary full" type="button">Guardar cambios de rutina</button>
+          </div>
+          <div class="panel">
+            <h3>Crear una rutina nueva</h3>
+            <p class="muted small">Por ejemplo, puede crear una rutina de movilidad o una sesión de miércoles. Después podrá asignarla desde Calendario.</p>
+            <label for="newPlanName">Nombre de la nueva rutina</label><input id="newPlanName" type="text" placeholder="Ej. Miércoles — Movilidad y core">
+            <button id="createPlanBtn" class="secondary full" type="button">Crear rutina</button>
+          </div>
+        </section>
+
         <section id="settingsView" class="view hidden">
           <div class="panel">
             <div class="eyebrow">CONFIGURACIÓN PERSONAL</div><h2>El sistema a su medida</h2>
@@ -170,6 +223,16 @@
             <label for="meditationMinutes">Minutos de meditación</label><input id="meditationMinutes" type="number" min="1" max="60" value="10">
             <label for="readingMinutes">Minutos de lectura</label><input id="readingMinutes" type="number" min="1" max="60" value="10">
             <button id="saveSettingsBtn" class="primary full" type="button">Guardar ajustes</button>
+          </div>
+          <div class="panel">
+            <h3>Biblioteca de lectura</h3>
+            <p class="muted small">Agregue los libros que vaya incorporando a su Hora de la Victoria. Quedarán disponibles en el selector de lectura de la mañana.</p>
+            <div class="form-grid">
+              <div><label for="newBookTitle">Título del libro</label><input id="newBookTitle" type="text" placeholder="Ej. El hombre en busca de sentido"></div>
+              <div><label for="newBookAuthor">Autor (opcional)</label><input id="newBookAuthor" type="text" placeholder="Ej. Viktor Frankl"></div>
+            </div>
+            <button id="addBookBtn" class="secondary full" type="button">Agregar libro</button>
+            <div id="bookLibrary" class="book-library"></div>
           </div>
           <div class="panel">
             <h3>Seguridad y datos</h3>

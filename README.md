@@ -58,3 +58,11 @@ La rutina está pensada como plantilla progresiva para retomar actividad tras un
 - Inicio del programa: 13 de octubre de 2026.
 
 **Advertencia de seguridad:** al ser un sitio estático, las credenciales configuradas en `app.js` son inspeccionables por cualquier persona que acceda al código publicado. La pantalla de login sirve para un prototipo personal, pero no protege datos de forma robusta. Antes de considerar el sitio privado, implemente autenticación de servidor (por ejemplo, Supabase Auth) y reglas de acceso a la base de datos. Como la contraseña fue incluida en el código cliente, cámbiela si alguna vez la reutiliza en otro servicio.
+
+
+## Funciones añadidas en la versión de planificación
+- Pestaña **Calendario**: asignar una rutina a una fecha específica, mover una sesión a otro día o dejar ese día como descanso.
+- Plan semanal base configurable para todos los días de la semana, incluyendo miércoles, sábado y domingo.
+- Pestaña **Rutinas**: editar el nombre, agregar/quitar ejercicios, definir prescripción y crear rutinas nuevas.
+- **Biblioteca de lectura** en Ajustes: agregar título y autor; aparecerá en el selector de lectura matutina.
+- Los cambios de planificación afectan el calendario futuro; los registros históricos guardados se conservan.

@@ -16,15 +16,22 @@
   const timeLabel = (iso) => iso ? new Date(iso).toLocaleTimeString("es-CL",{hour:"2-digit",minute:"2-digit"}) : "—";
   const safeParse = (s, fallback) => { try { return s ? JSON.parse(s) : fallback; } catch { return fallback; } };
   const defaultData = () => ({
-    version:1, settings:{startDate:"2026-10-13",targetDate:"2027-01-01",wakeGoal:"05:00",morningActivation:"Marcha en el sitio, movilidad de hombros, cadera y tobillos, sentadillas sin peso y bisagras de cadera. Aumente la intensidad gradualmente y mantenga la técnica.",meditationMinutes:10,readingMinutes:10},
-    days:{}, weights:[]
+    version:2, settings:{startDate:"2026-10-13",targetDate:"2027-01-01",wakeGoal:"05:00",morningActivation:"Marcha en el sitio, movilidad de hombros, cadera y tobillos, sentadillas sin peso y bisagras de cadera. Aumente la intensidad gradualmente y mantenga la técnica.",meditationMinutes:10,readingMinutes:10},
+    days:{}, weights:[], books:[
+      {title:"Meditaciones",author:"Marco Aurelio"},
+      {title:"Los 7 hábitos de la gente altamente efectiva",author:"Stephen R. Covey"},
+      {title:"Hábitos atómicos",author:"James Clear"}
+    ], plans:null, weeklyDefaults:{"1":"mon","2":"tue","4":"thu","5":"fri"}, schedule:{}
   });
   let data = safeParse(localStorage.getItem(STORE), null) || defaultData();
   if (data.settings && data.settings.startDate === "2026-10-12") data.settings.startDate = "2026-10-13";
+  if (!data.books) data.books = defaultData().books;
+  if (!data.weeklyDefaults) data.weeklyDefaults = {"1":"mon","2":"tue","4":"thu","5":"fri"};
+  if (!data.schedule) data.schedule = {};
   let currentKey = todayKey();
   let passwordChangeMode = false;
 
-  const workouts = {
+  const baseWorkouts = {
     1:{title:"Lunes — Torso A",intro:"Empuje y espalda. Descanse 60–90 s entre series; use una carga que permita técnica limpia.",exercises:[
       ["Press de banca con mancuernas","2×10–12 (sem. 1–2); luego 3×8–12","Pecho"],
       ["Remo con mancuernas apoyado en banco","2×10–12; luego 3×10–12","Espalda"],
@@ -54,8 +61,30 @@
       ["Plancha abdominal","2×15–25 s; luego 2–3×30–45 s","Abdomen"]
     ]}
   };
+  const planLabels = {mon:"Lunes",tue:"Martes",wed:"Miércoles",thu:"Jueves",fri:"Viernes",sat:"Sábado",sun:"Domingo"};
+  function getPlans() {
+    if (!data.plans) {
+      data.plans = {};
+      Object.entries(baseWorkouts).forEach(([day, plan]) => {
+        const id = "base-" + day;
+        data.plans[id] = {id, name:plan.title, exercises:plan.exercises.map(x=>({name:x[0],prescription:x[1],muscle:x[2]}))};
+        if (!data.weeklyDefaults) data.weeklyDefaults = {};
+        const existing = data.weeklyDefaults[day];
+        if (!existing || existing === ({1:"mon",2:"tue",4:"thu",5:"fri"}[day]) || !data.plans[existing]) data.weeklyDefaults[day] = id;
+      });
+    }
+    return data.plans;
+  }
+  function workoutFor(key) {
+    const explicit = data.schedule && data.schedule[key];
+    const day = weekday(key);
+    const defaultId = data.weeklyDefaults && data.weeklyDefaults[String(day)];
+    const id = explicit === "__rest__" ? null : (explicit || defaultId);
+    if (!id) return null;
+    const plan = getPlans()[id];
+    return plan ? {id:plan.id,title:plan.name,intro:"Siga la rutina configurada. Descanse 60–90 segundos cuando corresponda y priorice técnica, control y recuperación.",exercises:plan.exercises.map(x=>[x.name,x.prescription,x.muscle])} : null;
+  }
   const weekday = (key) => dateObj(key).getDay();
-  const workoutFor = (key) => workouts[weekday(key)] || null;
   const dayTemplate = (key) => ({
     date:key,wakeAt:null,morning:{activation:false,meditation:false,reading:false,victoryAt:null,book:"Meditaciones — Marco Aurelio",readingNotes:""},
     workout:{tasks:[],logs:{},notes:"",energy:"",duration:"",savedAt:null},closedAt:null,weight:null
@@ -97,7 +126,7 @@
   }
   function showApp() {
     $("lockScreen").classList.add("hidden");$("dashboard").classList.remove("hidden");$("lockBtn").classList.remove("hidden");
-    rollover();renderToday();renderProgress();renderHistory();fillSettings();
+    rollover();getPlans();renderToday();renderProgress();renderHistory();fillSettings();renderSchedule();renderPlanEditor();renderBooks();
   }
   function logout() {
     localStorage.removeItem(AUTH);sessionStorage.removeItem(SESSION);
@@ -128,7 +157,9 @@
       ["reading","Lectura consciente",`${Number(data.settings.readingMinutes)||10} min · lea sin distracciones`]
     ].map(([id,title,desc])=>`<label class="task ${day.morning[id]?"done":""}"><input type="checkbox" data-morning="${id}" ${day.morning[id]?"checked":""}><span><strong>${title}</strong><small>${id==="activation"?escapeHtml(data.settings.morningActivation):desc}</small></span></label>`).join("");
     $("morningProgress").textContent=`${["activation","meditation","reading"].filter(k=>day.morning[k]).length}/3 completados`;
-    $("bookSelect").value=day.morning.book||"Meditaciones — Marco Aurelio";
+    const currentBook = day.morning.book || (data.books[0] ? `${data.books[0].title}${data.books[0].author ? " — "+data.books[0].author : ""}` : "");
+    $("bookSelect").innerHTML = data.books.map(b=>{const label=`${b.title}${b.author ? " — "+b.author : ""}`;return `<option value="${escapeHtml(label)}">${escapeHtml(label)}</option>`;}).join("") + `<option value="Otro libro">Otro libro</option>`;
+    $("bookSelect").value = [...$("bookSelect").options].some(o=>o.value===currentBook) ? currentBook : (data.books[0] ? `${data.books[0].title}${data.books[0].author ? " — "+data.books[0].author : ""}` : "Otro libro");
     $("customBook").classList.toggle("hidden", $("bookSelect").value!=="Otro libro");
     $("customBook").value=day.morning.customBook||"";
     $("readingNotes").value=day.morning.readingNotes||"";
@@ -183,8 +214,34 @@
     $("historyList").innerHTML=keys.length?keys.map(k=>{const d=data.days[k];const count=["activation","meditation","reading"].filter(x=>d.morning[x]).length;const workout=!!d.workout.savedAt;return `<div class="history-item"><div><strong>${escapeHtml(dateLabel(k))}</strong><small>Despertar: ${timeLabel(d.wakeAt)} · Victoria: ${timeLabel(d.morning.victoryAt)}</small><br><small>Mañana: ${count}/3 · Entrenamiento: ${workout?"registrado":"sin registrar"}${d.closedAt?" · día cerrado":""}</small></div><button class="secondary" data-open-day="${k}" type="button">Ver</button></div>`;}).join(""):`<p class="muted">Todavía no hay historial. Registre su primera jornada.</p>`;
     document.querySelectorAll("[data-open-day]").forEach(b=>b.onclick=()=>{if(b.dataset.openDay!==todayKey()){toast("El historial es de consulta; el día actual se muestra en Hoy.");return;}switchView("todayView");});
   }
+  function renderSchedule() {
+    getPlans();
+    const date = $("scheduleDate").value || todayKey();
+    $("scheduleWorkout").innerHTML = `<option value="__rest__">Descanso / sin entrenamiento</option>` + Object.values(data.plans).map(p=>`<option value="${escapeHtml(p.id)}">${escapeHtml(p.name)}</option>`).join("");
+    $("scheduleWorkout").value = data.schedule[date] || data.weeklyDefaults[String(weekday(date))] || "__rest__";
+    const start = dateObj(todayKey()); const mondayOffset = (start.getDay()+6)%7; start.setDate(start.getDate()-mondayOffset);
+    const keys=[]; for(let i=0;i<7;i++){const d=new Date(start);d.setDate(start.getDate()+i);keys.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`);}
+    $("weekSchedule").innerHTML = keys.map(k=>{const plan=workoutFor(k);return `<div class="week-row"><div><strong>${escapeHtml(dateObj(k).toLocaleDateString("es-CL",{weekday:"long"}))}</strong><small>${escapeHtml(k)}</small></div><div><span class="week-plan">${escapeHtml(plan?plan.title:"Descanso")}</span>${data.schedule[k]?'<small>Personalizado</small>':'<small>Plan base</small>'}</div><button class="secondary" data-edit-date="${k}" type="button">Cambiar</button></div>`;}).join("");
+    $("weeklyDefaults").innerHTML = [1,2,3,4,5,6,0].map(day=>{const key=String(day),label=["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"][day],val=data.weeklyDefaults[key]||"__rest__";return `<div class="weekly-default-row"><label for="default-${key}">${label}</label><select id="default-${key}" data-weekday="${key}"><option value="__rest__">Descanso</option>${Object.values(data.plans).map(p=>`<option value="${escapeHtml(p.id)}">${escapeHtml(p.name)}</option>`).join("")}</select></div>`;}).join("");
+    document.querySelectorAll("[data-weekday]").forEach(s=>s.value=data.weeklyDefaults[s.dataset.weekday]||"__rest__");
+    document.querySelectorAll("[data-edit-date]").forEach(b=>b.onclick=()=>{$("scheduleDate").value=b.dataset.editDate;renderSchedule();});
+  }
+  function renderPlanEditor() {
+    getPlans();
+    const selected=$("planEditorSelect").value || Object.keys(data.plans)[0];
+    $("planEditorSelect").innerHTML=Object.values(data.plans).map(p=>`<option value="${escapeHtml(p.id)}">${escapeHtml(p.name)}</option>`).join("");
+    $("planEditorSelect").value=data.plans[selected]?selected:Object.keys(data.plans)[0];
+    const plan=data.plans[$("planEditorSelect").value]; if(!plan)return;
+    $("planName").value=plan.name;
+    $("planExercises").innerHTML=plan.exercises.map((e,i)=>`<div class="plan-exercise-row"><div><strong>${escapeHtml(e.name)}</strong><small>${escapeHtml(e.prescription)} · ${escapeHtml(e.muscle||"Sin grupo definido")}</small></div><button class="danger" data-remove-exercise="${i}" type="button">Quitar</button></div>`).join("") || `<p class="muted small">Esta rutina aún no tiene ejercicios.</p>`;
+    document.querySelectorAll("[data-remove-exercise]").forEach(b=>b.onclick=()=>{const p=data.plans[$("planEditorSelect").value];p.exercises.splice(Number(b.dataset.removeExercise),1);persist();renderPlanEditor();toast("Ejercicio quitado de la rutina.");});
+  }
+  function renderBooks() {
+    $("bookLibrary").innerHTML=data.books.map((b,i)=>`<div class="book-row"><div><strong>${escapeHtml(b.title)}</strong><small>${escapeHtml(b.author||"Autor no indicado")}</small></div><button class="danger" data-remove-book="${i}" type="button">Quitar</button></div>`).join("") || `<p class="muted small">Todavía no hay libros. Agregue uno para usarlo en la lectura matutina.</p>`;
+    document.querySelectorAll("[data-remove-book]").forEach(b=>b.onclick=()=>{if(data.books.length<=1){toast("Mantenga al menos un libro en la biblioteca.");return;}data.books.splice(Number(b.dataset.removeBook),1);persist();renderBooks();renderToday();});
+  }
   function fillSettings(){for(const k of ["startDate","targetDate","wakeGoal","morningActivation","meditationMinutes","readingMinutes"])$(k).value=data.settings[k]??"";}
-  function switchView(id){document.querySelectorAll(".view").forEach(v=>v.classList.toggle("hidden",v.id!==id));document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active",t.dataset.view===id));if(id==="progressView")renderProgress();if(id==="historyView")renderHistory();}
+  function switchView(id){document.querySelectorAll(".view").forEach(v=>v.classList.toggle("hidden",v.id!==id));document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active",t.dataset.view===id));if(id==="progressView")renderProgress();if(id==="historyView")renderHistory();if(id==="scheduleView")renderSchedule();if(id==="plansView")renderPlanEditor();if(id==="settingsView")renderBooks();}
   $("wakeBtn").onclick=()=>{const d=getDay();if(!d.wakeAt){d.wakeAt=new Date().toISOString();persist();renderToday();toast(`Despertar registrado: ${timeLabel(d.wakeAt)}.`);}};
   $("victoryBtn").onclick=()=>{const d=getDay();if(!["activation","meditation","reading"].every(k=>d.morning[k])){toast("Complete activación, meditación y lectura antes de registrar la victoria.");return;}d.morning.victoryAt=new Date().toISOString();d.morning.book=$("bookSelect").value==="Otro libro"?($("customBook").value.trim()||"Otro libro"):$("bookSelect").value;d.morning.customBook=$("customBook").value;d.morning.readingNotes=$("readingNotes").value;persist();renderToday();renderProgress();toast("Hora de la Victoria registrada.");};
   $("bookSelect").onchange=()=>{$("customBook").classList.toggle("hidden",$("bookSelect").value!=="Otro libro");};
@@ -193,6 +250,17 @@
   $("progressRange").onchange=renderProgress;
   $("saveWeightBtn").onclick=()=>{const weight=Number($("bodyWeight").value),date=$("bodyMeasureDate").value||todayKey();if(!weight||weight<20||weight>300){toast("Ingrese un peso válido.");return;}data.weights=data.weights.filter(x=>x.date!==date);data.weights.push({date,weight});data.weights.sort((a,b)=>a.date.localeCompare(b.date));persist();renderProgress();toast("Medición guardada.");};
   $("exportBtn").onclick=()=>{const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=`club-5am-respaldo-${todayKey()}.json`;a.click();URL.revokeObjectURL(url);};
+  $("scheduleDate").value=todayKey();
+  $("scheduleDate").onchange=renderSchedule;
+  $("assignWorkoutBtn").onclick=()=>{const date=$("scheduleDate").value;if(!date){toast("Seleccione una fecha.");return;}const id=$("scheduleWorkout").value;if(id==="__rest__")data.schedule[date]="__rest__";else data.schedule[date]=id;persist();renderSchedule();if(date===todayKey())renderToday();renderProgress();toast("Planificación actualizada.");};
+  $("clearScheduleBtn").onclick=()=>{const date=$("scheduleDate").value;if(date){delete data.schedule[date];persist();renderSchedule();if(date===todayKey())renderToday();toast("Se restauró el plan base para esa fecha.");}};
+  $("resetWeekBtn").onclick=()=>{const start=dateObj(todayKey());start.setDate(start.getDate()-((start.getDay()+6)%7));for(let i=0;i<7;i++){const d=new Date(start);d.setDate(start.getDate()+i);const k=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;delete data.schedule[k];}persist();renderSchedule();renderToday();toast("Semana restablecida al plan base.");};
+  $("saveWeeklyDefaultsBtn").onclick=()=>{document.querySelectorAll("[data-weekday]").forEach(s=>{if(s.value==="__rest__")delete data.weeklyDefaults[s.dataset.weekday];else data.weeklyDefaults[s.dataset.weekday]=s.value;});persist();renderSchedule();renderToday();toast("Plan semanal guardado.");};
+  $("planEditorSelect").onchange=renderPlanEditor;
+  $("addExerciseBtn").onclick=()=>{const name=$("newExerciseName").value.trim();if(!name){toast("Escriba el nombre del ejercicio.");return;}const plan=data.plans[$("planEditorSelect").value];plan.exercises.push({name,prescription:$("newExercisePrescription").value.trim()||"2×10–12",muscle:$("newExerciseMuscle").value.trim()||"Por definir"});$("newExerciseName").value="";$("newExercisePrescription").value="";$("newExerciseMuscle").value="";persist();renderPlanEditor();toast("Ejercicio agregado.");};
+  $("savePlanBtn").onclick=()=>{const p=data.plans[$("planEditorSelect").value];const name=$("planName").value.trim();if(!name){toast("La rutina necesita un nombre.");return;}p.name=name;persist();renderPlanEditor();renderSchedule();renderToday();toast("Rutina guardada.");};
+  $("createPlanBtn").onclick=()=>{const name=$("newPlanName").value.trim();if(!name){toast("Escriba un nombre para la rutina.");return;}const id="custom-"+Date.now();data.plans[id]={id,name,exercises:[]};$("newPlanName").value="";persist();renderPlanEditor();renderSchedule();$("planEditorSelect").value=id;renderPlanEditor();toast("Rutina nueva creada. Agregue ejercicios desde el editor.");};
+  $("addBookBtn").onclick=()=>{const title=$("newBookTitle").value.trim();const author=$("newBookAuthor").value.trim();if(!title){toast("Escriba el título del libro.");return;}if(data.books.some(b=>b.title.toLowerCase()===title.toLowerCase()&&(b.author||"").toLowerCase()===author.toLowerCase())){toast("Ese libro ya está en la biblioteca.");return;}data.books.push({title,author});$("newBookTitle").value="";$("newBookAuthor").value="";persist();renderBooks();renderToday();toast("Libro agregado a la biblioteca.");};
   $("saveSettingsBtn").onclick=()=>{for(const k of ["startDate","targetDate","wakeGoal","morningActivation"])data.settings[k]=$(k).value;data.settings.meditationMinutes=Number($("meditationMinutes").value)||10;data.settings.readingMinutes=Number($("readingMinutes").value)||10;persist();renderToday();toast("Ajustes guardados.");};
   $("changePasswordBtn").onclick=()=>{toast("Las credenciales de este prototipo se configuran en app.js. Para seguridad real, use autenticación de servidor.");};
   $("clearDataBtn").onclick=()=>{if(confirm("¿Eliminar todos los entrenamientos, estadísticas y mediciones guardadas en este navegador? Esta acción no se puede deshacer.")){data=defaultData();persist();renderToday();renderProgress();renderHistory();fillSettings();toast("Registros eliminados.");}};

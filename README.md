@@ -1,6 +1,6 @@
 # Club de las 5 AM — Hora de la Victoria
 
-Web estática para registrar despertar, activación, meditación, lectura, entrenamiento, mediciones y progreso personal durante el ciclo del 12 de octubre de 2026 al 1 de enero de 2027.
+Web estática para registrar despertar, activación, meditación, lectura, entrenamiento, mediciones y progreso personal durante el ciclo del 13 de octubre de 2026 al 1 de enero de 2027.
 
 ## Nombre propuesto
 **Club de las 5 AM**  
@@ -50,3 +50,11 @@ Para protección real, múltiples dispositivos y datos persistentes:
 
 ## Nota de entrenamiento
 La rutina está pensada como plantilla progresiva para retomar actividad tras un periodo sin entrenar. Ajuste cargas a su capacidad actual, no entrene con dolor y priorice técnica y recuperación.
+
+
+## Perfil inicial
+- Usuario: `Vicente Moreno`
+- Contraseña: `Qwerty1234*`
+- Inicio del programa: 13 de octubre de 2026.
+
+**Advertencia de seguridad:** al ser un sitio estático, las credenciales configuradas en `app.js` son inspeccionables por cualquier persona que acceda al código publicado. La pantalla de login sirve para un prototipo personal, pero no protege datos de forma robusta. Antes de considerar el sitio privado, implemente autenticación de servidor (por ejemplo, Supabase Auth) y reglas de acceso a la base de datos. Como la contraseña fue incluida en el código cliente, cámbiela si alguna vez la reutiliza en otro servicio.

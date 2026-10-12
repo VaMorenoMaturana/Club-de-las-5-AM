@@ -24,8 +24,10 @@
         <h1 id="lockTitle">Su día comienza antes que el mundo.</h1>
         <p class="muted" id="lockCopy">Un espacio privado para construir constancia, registrar su entrenamiento y competir contra su versión de ayer.</p>
         <form id="passwordForm" class="stack">
-          <label for="passwordInput" id="passwordLabel">Crear una contraseña</label>
-          <input id="passwordInput" type="password" autocomplete="current-password" minlength="4" required placeholder="Mínimo 4 caracteres">
+          <label for="usernameInput">Usuario</label>
+          <input id="usernameInput" type="text" autocomplete="username" required placeholder="Nombre de usuario">
+          <label for="passwordInput" id="passwordLabel">Contraseña</label>
+          <input id="passwordInput" type="password" autocomplete="current-password" required placeholder="Ingrese su contraseña">
           <label class="remember-row"><input id="rememberPassword" type="checkbox" checked> Mantener la sesión en este dispositivo</label>
           <p id="passwordError" class="error" role="alert"></p>
           <button class="primary" type="submit" id="passwordSubmit">Entrar al Club</button>

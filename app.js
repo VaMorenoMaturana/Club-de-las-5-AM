@@ -1,8 +1,11 @@
 (() => {
   "use strict";
   const STORE = "club5am.v1";
-  const AUTH = "club5am.auth.v1";
+  const AUTH = "club5am.auth.v2";
   const SESSION = "club5am.session.v1";
+  // Prototipo estático: estas credenciales quedan visibles en el JavaScript público.
+  // Para seguridad real, migrar la autenticación a un backend (p. ej. Supabase Auth).
+  const PROFILE = { username: "Vicente Moreno", password: "Qwerty1234*" };
   const $ = (id) => document.getElementById(id);
   const todayKey = () => {
     const d = new Date();
@@ -13,10 +16,11 @@
   const timeLabel = (iso) => iso ? new Date(iso).toLocaleTimeString("es-CL",{hour:"2-digit",minute:"2-digit"}) : "—";
   const safeParse = (s, fallback) => { try { return s ? JSON.parse(s) : fallback; } catch { return fallback; } };
   const defaultData = () => ({
-    version:1, settings:{startDate:"2026-10-12",targetDate:"2027-01-01",wakeGoal:"05:00",morningActivation:"Marcha en el sitio, movilidad de hombros, cadera y tobillos, sentadillas sin peso y bisagras de cadera. Aumente la intensidad gradualmente y mantenga la técnica.",meditationMinutes:10,readingMinutes:10},
+    version:1, settings:{startDate:"2026-10-13",targetDate:"2027-01-01",wakeGoal:"05:00",morningActivation:"Marcha en el sitio, movilidad de hombros, cadera y tobillos, sentadillas sin peso y bisagras de cadera. Aumente la intensidad gradualmente y mantenga la técnica.",meditationMinutes:10,readingMinutes:10},
     days:{}, weights:[]
   });
   let data = safeParse(localStorage.getItem(STORE), null) || defaultData();
+  if (data.settings && data.settings.startDate === "2026-10-12") data.settings.startDate = "2026-10-13";
   let currentKey = todayKey();
   let passwordChangeMode = false;
 
@@ -63,27 +67,31 @@
   const isAuthed = () => sessionStorage.getItem(SESSION)==="yes" || localStorage.getItem(AUTH)==="remembered";
 
   function setupAuth() {
-    const saved = localStorage.getItem("club5am.password.v1");
-    $("lockTitle").textContent = saved ? "Bienvenido de nuevo." : "Su día comienza antes que el mundo.";
-    $("lockCopy").textContent = saved ? "Ingrese su contraseña para continuar." : "Cree una contraseña local para su espacio personal.";
-    $("passwordLabel").textContent = saved ? "Contraseña" : "Crear una contraseña";
-    $("passwordSubmit").textContent = saved ? "Entrar al Club" : "Crear acceso y entrar";
-    $("passwordInput").minLength = saved ? 1 : 4;
-    $("passwordInput").placeholder = saved ? "Su contraseña" : "Mínimo 4 caracteres";
+    $("lockTitle").textContent = "Bienvenido, Vicente.";
+    $("lockCopy").textContent = "Su perfil ya está creado. Ingrese sus credenciales para continuar.";
+    $("passwordLabel").textContent = "Contraseña";
+    $("passwordSubmit").textContent = "Entrar al Club";
+    $("usernameInput").value = "Vicente Moreno";
+    $("usernameInput").autocomplete = "username";
+    $("passwordInput").minLength = 1;
+    $("passwordInput").placeholder = "Su contraseña";
+    $("rememberPassword").checked = localStorage.getItem(AUTH) === "remembered";
     $("passwordForm").onsubmit = (e) => {
       e.preventDefault();
-      const val=$("passwordInput").value;
-      const existing=localStorage.getItem("club5am.password.v1");
-      if(existing && !passwordChangeMode && val!==existing){$("passwordError").textContent="La contraseña no coincide.";return;}
-      if(!existing || passwordChangeMode){
-        if(val.length<4){$("passwordError").textContent="Use al menos 4 caracteres.";return;}
-        localStorage.setItem("club5am.password.v1",val);
+      const username = $("usernameInput").value.trim();
+      const password = $("passwordInput").value;
+      if (username !== PROFILE.username || password !== PROFILE.password) {
+        $("passwordError").textContent = "Usuario o contraseña incorrectos.";
+        return;
       }
-      passwordChangeMode=false;
-      $("passwordError").textContent="";
-      if($("rememberPassword").checked) localStorage.setItem(AUTH,"remembered");
-      else {localStorage.removeItem(AUTH);sessionStorage.setItem(SESSION,"yes");}
-      $("passwordInput").value="";
+      $("passwordError").textContent = "";
+      if ($("rememberPassword").checked) {
+        localStorage.setItem(AUTH, "remembered");
+      } else {
+        localStorage.removeItem(AUTH);
+        sessionStorage.setItem(SESSION, "yes");
+      }
+      $("passwordInput").value = "";
       showApp();
     };
   }
@@ -186,7 +194,7 @@
   $("saveWeightBtn").onclick=()=>{const weight=Number($("bodyWeight").value),date=$("bodyMeasureDate").value||todayKey();if(!weight||weight<20||weight>300){toast("Ingrese un peso válido.");return;}data.weights=data.weights.filter(x=>x.date!==date);data.weights.push({date,weight});data.weights.sort((a,b)=>a.date.localeCompare(b.date));persist();renderProgress();toast("Medición guardada.");};
   $("exportBtn").onclick=()=>{const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=`club-5am-respaldo-${todayKey()}.json`;a.click();URL.revokeObjectURL(url);};
   $("saveSettingsBtn").onclick=()=>{for(const k of ["startDate","targetDate","wakeGoal","morningActivation"])data.settings[k]=$(k).value;data.settings.meditationMinutes=Number($("meditationMinutes").value)||10;data.settings.readingMinutes=Number($("readingMinutes").value)||10;persist();renderToday();toast("Ajustes guardados.");};
-  $("changePasswordBtn").onclick=()=>{passwordChangeMode=true;logout();$("lockTitle").textContent="Cambiar contraseña local";$("lockCopy").textContent="Defina una nueva contraseña para este dispositivo."; $("passwordLabel").textContent="Nueva contraseña";$("passwordSubmit").textContent="Guardar nueva contraseña";};
+  $("changePasswordBtn").onclick=()=>{toast("Las credenciales de este prototipo se configuran en app.js. Para seguridad real, use autenticación de servidor.");};
   $("clearDataBtn").onclick=()=>{if(confirm("¿Eliminar todos los entrenamientos, estadísticas y mediciones guardadas en este navegador? Esta acción no se puede deshacer.")){data=defaultData();persist();renderToday();renderProgress();renderHistory();fillSettings();toast("Registros eliminados.");}};
   $("lockBtn").onclick=logout;
   document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>switchView(t.dataset.view));

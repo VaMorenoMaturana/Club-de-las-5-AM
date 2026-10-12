@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101820">
+  <title>Club de las 5 AM — Hora de la Victoria</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="#" aria-label="Club de las 5 AM">
+        <span class="brand-mark">V</span>
+        <span><strong>CLUB DE LAS 5 AM</strong><small>HORA DE LA VICTORIA</small></span>
+      </a>
+      <button id="lockBtn" class="text-button hidden" type="button">Bloquear</button>
+    </header>
+
+    <main>
+      <section id="lockScreen" class="lock-screen panel">
+        <div class="eyebrow">DISCIPLINA · CARÁCTER · PROGRESO</div>
+        <div class="sun-mark">☼</div>
+        <h1 id="lockTitle">Su día comienza antes que el mundo.</h1>
+        <p class="muted" id="lockCopy">Un espacio privado para construir constancia, registrar su entrenamiento y competir contra su versión de ayer.</p>
+        <form id="passwordForm" class="stack">
+          <label for="passwordInput" id="passwordLabel">Crear una contraseña</label>
+          <input id="passwordInput" type="password" autocomplete="current-password" minlength="4" required placeholder="Mínimo 4 caracteres">
+          <label class="remember-row"><input id="rememberPassword" type="checkbox" checked> Mantener la sesión en este dispositivo</label>
+          <p id="passwordError" class="error" role="alert"></p>
+          <button class="primary" type="submit" id="passwordSubmit">Entrar al Club</button>
+        </form>
+        <p class="tiny muted">Nota: el acceso local protege la vista, pero no equivale a una autenticación segura de servidor. Consulte README antes de publicar información sensible.</p>
+      </section>
+
+      <section id="dashboard" class="hidden">
+        <section class="hero panel">
+          <div>
+            <div class="eyebrow" id="todayLabel">SU HORA DE LA VICTORIA</div>
+            <h1 id="greeting">Buenos días.</h1>
+            <p id="dateLine" class="muted"></p>
+            <p class="hero-quote">“La motivación inicia. La disciplina sostiene.”</p>
+          </div>
+          <div class="hero-side">
+            <div class="streak-number" id="streakCount">0</div>
+            <div class="muted small">días consecutivos<br>con una victoria</div>
+          </div>
+        </section>
+
+        <nav class="tabs" aria-label="Secciones">
+          <button class="tab active" data-view="todayView">Hoy</button>
+          <button class="tab" data-view="progressView">Mi avance</button>
+          <button class="tab" data-view="historyView">Historial</button>
+          <button class="tab" data-view="settingsView">Ajustes</button>
+        </nav>
+
+        <section id="todayView" class="view">
+          <div id="wakePanel" class="wake-card panel">
+            <div class="wake-icon">05:00</div>
+            <div class="wake-copy">
+              <div class="eyebrow">PRIMERA VICTORIA</div>
+              <h2>Despertar</h2>
+              <p class="muted">Registre la hora real en que se levantó. La hora no se modifica manualmente.</p>
+              <p id="wakeStatus" class="status-line">Aún no ha registrado su despertar de hoy.</p>
+            </div>
+            <button id="wakeBtn" class="primary" type="button">Estoy despierto</button>
+          </div>
+
+          <div id="morningSection" class="panel section-card hidden">
+            <div class="section-heading">
+              <div><div class="eyebrow">05:00–06:00</div><h2>Hora de la Victoria</h2></div>
+              <span class="pill" id="morningProgress">0/3 completados</span>
+            </div>
+            <p class="muted">Despierte el cuerpo, aquiete la mente y alimente el criterio.</p>
+            <div id="morningTasks" class="task-list"></div>
+            <div class="reading-choice">
+              <label for="bookSelect">Libro de lectura</label>
+              <select id="bookSelect">
+                <option value="Meditaciones — Marco Aurelio">Meditaciones — Marco Aurelio</option>
+                <option value="Los 7 hábitos de la gente altamente efectiva — Stephen R. Covey">Los 7 hábitos de la gente altamente efectiva — Stephen R. Covey</option>
+                <option value="Hábitos atómicos — James Clear">Hábitos atómicos — James Clear</option>
+                <option value="Otro libro">Otro libro</option>
+              </select>
+              <input id="customBook" class="hidden" type="text" placeholder="Escriba el título del libro">
+              <label for="readingNotes">Idea que me llevo (opcional)</label>
+              <textarea id="readingNotes" rows="2" placeholder="Una idea que quiero aplicar hoy…"></textarea>
+            </div>
+            <button id="victoryBtn" class="primary full" type="button">Registrar Hora de la Victoria</button>
+            <p id="morningHint" class="tiny muted">Complete las tareas para registrar la victoria. Puede guardar una jornada parcial al final del día.</p>
+          </div>
+
+          <div id="afternoonSection" class="panel section-card">
+            <div class="section-heading">
+              <div><div class="eyebrow">ENTRENAMIENTO PRINCIPAL</div><h2 id="workoutTitle">Rutina de la tarde</h2></div>
+              <span class="pill" id="workoutDayType">Plan del día</span>
+            </div>
+            <p id="workoutIntro" class="muted"></p>
+            <div id="workoutTasks" class="task-list"></div>
+            <div class="workout-log">
+              <h3>Registro de entrenamiento</h3>
+              <p class="muted small">Registre cargas y repeticiones reales. En ejercicios por lado, anote las repeticiones por cada lado.</p>
+              <div id="exerciseLog"></div>
+              <label for="sessionNotes">Notas de la sesión</label>
+              <textarea id="sessionNotes" rows="2" placeholder="Energía, técnica, molestias o progreso…"></textarea>
+              <div class="form-grid">
+                <div><label for="energyRating">Energía (1–5)</label><select id="energyRating"><option value="">Elegir</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select></div>
+                <div><label for="sessionDuration">Duración (min)</label><input id="sessionDuration" type="number" min="0" max="240" placeholder="Ej. 42"></div>
+              </div>
+              <button id="saveDayBtn" class="primary full" type="button">Guardar registro del día</button>
+              <p class="tiny muted">Guardar registra el estado del día y no impide seguir editándolo antes de medianoche.</p>
+            </div>
+          </div>
+
+          <div class="panel reflection-card">
+            <div class="eyebrow">CIERRE DEL DÍA</div>
+            <h2>La disciplina también es revisar.</h2>
+            <p class="muted">Antes de terminar, revise lo que cumplió y lo que debe retomar mañana. El registro no es un juicio: es información para mejorar.</p>
+            <button id="closeDayBtn" class="secondary full" type="button">Cerrar y registrar el día</button>
+            <p id="closeDayStatus" class="status-line"></p>
+          </div>
+        </section>
+
+        <section id="progressView" class="view hidden">
+          <div class="section-heading"><div><div class="eyebrow">DATOS, NO EXCUSAS</div><h2>Mi avance</h2></div><select id="progressRange" aria-label="Periodo"><option value="7">Últimos 7 días</option><option value="28">Últimos 28 días</option><option value="all">Todo el periodo</option></select></div>
+          <div class="stats-grid">
+            <article class="stat-card"><span class="muted">Días registrados</span><strong id="statDays">0</strong><small>Jornadas con registro</small></article>
+            <article class="stat-card"><span class="muted">Hora de despertar media</span><strong id="statWake">—</strong><small>En días con despertar registrado</small></article>
+            <article class="stat-card"><span class="muted">Hora de la Victoria</span><strong id="statVictory">0%</strong><small>Sobre días registrados</small></article>
+            <article class="stat-card"><span class="muted">Entrenamientos</span><strong id="statWorkouts">0</strong><small>Sesiones de fuerza registradas</small></article>
+          </div>
+          <div class="panel">
+            <div class="section-heading"><div><h3>Consistencia diaria</h3><p class="muted small">Cada barra representa el porcentaje de tareas cumplidas en el día.</p></div></div>
+            <div id="consistencyChart" class="chart"></div>
+          </div>
+          <div class="panel">
+            <h3>Qué falta reforzar</h3>
+            <div id="improvementList" class="insight-list"></div>
+          </div>
+          <div class="panel">
+            <h3>Competencia conmigo mismo</h3>
+            <p id="progressInsight" class="muted"></p>
+            <div class="form-grid">
+              <div><label for="bodyWeight">Peso corporal (kg)</label><input id="bodyWeight" type="number" min="20" max="300" step="0.1" placeholder="Opcional"></div>
+              <div><label for="bodyMeasureDate">Fecha de medición</label><input id="bodyMeasureDate" type="date"></div>
+            </div>
+            <button id="saveWeightBtn" class="secondary" type="button">Guardar medición</button>
+            <div id="weightHistory" class="weight-history"></div>
+          </div>
+          <div class="panel">
+            <h3>Exportar o respaldar</h3>
+            <p class="muted small">Descargue una copia JSON de sus registros para conservarlos o migrarlos en el futuro.</p>
+            <button id="exportBtn" class="secondary" type="button">Exportar mis datos (JSON)</button>
+          </div>
+        </section>
+
+        <section id="historyView" class="view hidden">
+          <div class="section-heading"><div><div class="eyebrow">SU RECORRIDO</div><h2>Historial</h2></div></div>
+          <div id="historyList" class="history-list"></div>
+        </section>
+
+        <section id="settingsView" class="view hidden">
+          <div class="panel">
+            <div class="eyebrow">CONFIGURACIÓN PERSONAL</div><h2>El sistema a su medida</h2>
+            <label for="startDate">Inicio del programa</label><input id="startDate" type="date">
+            <label for="targetDate">Fecha objetivo</label><input id="targetDate" type="date">
+            <label for="wakeGoal">Meta de despertar</label><input id="wakeGoal" type="time" value="05:00">
+            <label for="morningActivation">Activación matutina</label><textarea id="morningActivation" rows="3">Marcha en el sitio, movilidad de hombros, cadera y tobillos, sentadillas sin peso y bisagras de cadera. Aumente la intensidad gradualmente y mantenga la técnica.</textarea>
+            <label for="meditationMinutes">Minutos de meditación</label><input id="meditationMinutes" type="number" min="1" max="60" value="10">
+            <label for="readingMinutes">Minutos de lectura</label><input id="readingMinutes" type="number" min="1" max="60" value="10">
+            <button id="saveSettingsBtn" class="primary full" type="button">Guardar ajustes</button>
+          </div>
+          <div class="panel">
+            <h3>Seguridad y datos</h3>
+            <p class="muted small">Los registros de esta versión viven en el almacenamiento local del navegador. Si borra los datos del navegador o cambia de dispositivo, puede perder el acceso a ellos. La contraseña local no protege los archivos HTML ni los datos contra alguien con conocimientos técnicos.</p>
+            <button id="changePasswordBtn" class="secondary" type="button">Cambiar contraseña local</button>
+            <button id="clearDataBtn" class="danger full" type="button">Eliminar todos mis registros</button>
+          </div>
+        </section>
+      </section>
+    </main>
+    <footer><span>CLUB DE LAS 5 AM</span><span>Prudencia · Templanza · Constancia</span></footer>
+  </div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="app.js"></script>
+</body>
+</html>

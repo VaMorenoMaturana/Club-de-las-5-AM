@@ -66,3 +66,15 @@ La rutina está pensada como plantilla progresiva para retomar actividad tras un
 - Pestaña **Rutinas**: editar el nombre, agregar/quitar ejercicios, definir prescripción y crear rutinas nuevas.
 - **Biblioteca de lectura** en Ajustes: agregar título y autor; aparecerá en el selector de lectura matutina.
 - Los cambios de planificación afectan el calendario futuro; los registros históricos guardados se conservan.
+
+
+## Supabase (autenticación real y sincronización)
+1. Cree un proyecto Supabase independiente para Club de las 5 AM.
+2. En Authentication, habilite Email y cree su usuario desde Authentication > Users. El inicio de sesión usa correo electrónico y contraseña; “Vicente Moreno” es el nombre visible del perfil.
+3. En Project Settings > API copie Project URL y la publishable key (o anon key legacy). Pegue ambos valores en `supabase-config.js`. No use nunca la `service_role` key en frontend.
+4. En SQL Editor ejecute `supabase-schema.sql`. La tabla `user_state` usa JSONB para persistir el estado del usuario y RLS limita el acceso a `auth.uid()`.
+5. Despliegue los archivos en Render Static Site (Publish Directory `.`; sin build command).
+6. Para migrar, en la versión antigua exporte Mi avance > Exportar mis datos (JSON). Inicie sesión en la nueva versión, seleccione ese archivo en Mi avance y pulse Importar respaldo JSON. La importación reemplaza el estado remoto: haga un respaldo previo.
+7. Pruebe guardar un registro, recargar la página e iniciar sesión desde otro navegador.
+
+La contraseña ya no está codificada en `app.js`; la administra Supabase Auth. El frontend solo contiene la URL y la clave pública, que deben estar protegidas por las políticas RLS. Esta primera versión almacena el estado como un JSONB por usuario; en una fase posterior se pueden normalizar días, ejercicios, rutinas y mediciones en tablas relacionales.

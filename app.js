@@ -1,11 +1,11 @@
 (() => {
   "use strict";
   const STORE = "club5am.v1";
-  const AUTH = "club5am.auth.v2";
-  const SESSION = "club5am.session.v1";
-  // Prototipo estático: estas credenciales quedan visibles en el JavaScript público.
-  // Para seguridad real, migrar la autenticación a un backend (p. ej. Supabase Auth).
-  const PROFILE = { username: "Vicente Moreno", password: "Qwerty1234*" };
+  const SESSION = "club5am.session.v2";
+  const CFG = window.CLUB5AM_SUPABASE || {};
+  const supabaseReady = !!(window.supabase && CFG.url && CFG.anonKey && !CFG.url.includes("PEGAR_") && !CFG.anonKey.includes("PEGAR_"));
+  const sb = supabaseReady ? window.supabase.createClient(CFG.url, CFG.anonKey, {auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}}) : null;
+  let currentUser = null, remoteLoading = false, saveTimer = null;
   const $ = (id) => document.getElementById(id);
   const todayKey = () => {
     const d = new Date();
@@ -90,48 +90,52 @@
     workout:{tasks:[],logs:{},notes:"",energy:"",duration:"",savedAt:null},closedAt:null,weight:null
   });
   const getDay = (key=currentKey) => { if(!data.days[key]) data.days[key]=dayTemplate(key); return data.days[key]; };
-  const persist = () => localStorage.setItem(STORE, JSON.stringify(data));
+  const persist = () => {
+    localStorage.setItem(STORE, JSON.stringify(data));
+    if (!sb || !currentUser || remoteLoading) return;
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(async () => {
+      const {error} = await sb.from("user_state").upsert({user_id:currentUser.id,payload:data,updated_at:new Date().toISOString()},{onConflict:"user_id"});
+      if(error) toast("Guardado localmente, pero falló la sincronización con Supabase.");
+    }, 500);
+  };
   const toast = (msg) => { const el=$("toast"); el.textContent=msg; el.classList.add("show"); setTimeout(()=>el.classList.remove("show"),2600); };
   const escapeHtml = (s) => String(s ?? "").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-  const isAuthed = () => sessionStorage.getItem(SESSION)==="yes" || localStorage.getItem(AUTH)==="remembered";
-
+  async function loadRemoteData() {
+    if (!sb || !currentUser) return;
+    remoteLoading = true;
+    const {data: row,error} = await sb.from("user_state").select("payload").eq("user_id",currentUser.id).maybeSingle();
+    if(error){remoteLoading=false;toast("No se pudieron cargar los datos remotos; revise la conexión.");return;}
+    if(row && row.payload){data=row.payload; if(!data.books)data.books=defaultData().books;if(!data.schedule)data.schedule={};if(!data.weights)data.weights=[];}
+    else {
+      const local=safeParse(localStorage.getItem(STORE),null); if(local && Object.keys(local.days||{}).length)data=local;
+      const {error:saveError}=await sb.from("user_state").upsert({user_id:currentUser.id,payload:data,updated_at:new Date().toISOString()},{onConflict:"user_id"});
+      if(saveError)toast("Sesión iniciada, pero no se pudo crear el registro inicial.");
+    }
+    localStorage.setItem(STORE,JSON.stringify(data)); remoteLoading=false;
+  }
   function setupAuth() {
-    $("lockTitle").textContent = "Bienvenido, Vicente.";
-    $("lockCopy").textContent = "Su perfil ya está creado. Ingrese sus credenciales para continuar.";
-    $("passwordLabel").textContent = "Contraseña";
-    $("passwordSubmit").textContent = "Entrar al Club";
-    $("usernameInput").value = "Vicente Moreno";
-    $("usernameInput").autocomplete = "username";
-    $("passwordInput").minLength = 1;
-    $("passwordInput").placeholder = "Su contraseña";
-    $("rememberPassword").checked = localStorage.getItem(AUTH) === "remembered";
-    $("passwordForm").onsubmit = (e) => {
-      e.preventDefault();
-      const username = $("usernameInput").value.trim();
-      const password = $("passwordInput").value;
-      if (username !== PROFILE.username || password !== PROFILE.password) {
-        $("passwordError").textContent = "Usuario o contraseña incorrectos.";
-        return;
-      }
-      $("passwordError").textContent = "";
-      if ($("rememberPassword").checked) {
-        localStorage.setItem(AUTH, "remembered");
-      } else {
-        localStorage.removeItem(AUTH);
-        sessionStorage.setItem(SESSION, "yes");
-      }
-      $("passwordInput").value = "";
-      showApp();
+    $("lockTitle").textContent="Bienvenido al Club, Vicente.";
+    $("lockCopy").textContent=supabaseReady?"Inicie sesión con su cuenta privada.":"Configure la URL y la clave pública de Supabase en supabase-config.js.";
+    $("passwordLabel").textContent="Contraseña"; $("passwordSubmit").textContent="Iniciar sesión";
+    $("usernameInput").value=""; $("passwordInput").placeholder="Contraseña";
+    $("passwordError").textContent="";
+    $("passwordForm").onsubmit=async(e)=>{
+      e.preventDefault(); if(!supabaseReady){$("passwordError").textContent="Supabase no está configurado. Consulte README.md.";return;}
+      const btn=$("passwordSubmit");btn.disabled=true;btn.textContent="Conectando…";
+      const {data:authData,error}=await sb.auth.signInWithPassword({email:$("usernameInput").value.trim(),password:$("passwordInput").value});
+      btn.disabled=false;btn.textContent="Iniciar sesión";
+      if(error){$("passwordError").textContent="No se pudo iniciar sesión. Verifique sus credenciales.";return;}
+      currentUser=authData.user;sessionStorage.setItem(SESSION,"yes");await loadRemoteData();$("passwordInput").value="";showApp();
     };
   }
   function showApp() {
     $("lockScreen").classList.add("hidden");$("dashboard").classList.remove("hidden");$("lockBtn").classList.remove("hidden");
     rollover();getPlans();renderToday();renderProgress();renderHistory();fillSettings();renderSchedule();renderPlanEditor();renderBooks();
   }
-  function logout() {
-    localStorage.removeItem(AUTH);sessionStorage.removeItem(SESSION);
-    $("dashboard").classList.add("hidden");$("lockScreen").classList.remove("hidden");$("lockBtn").classList.add("hidden");
-    setupAuth();toast("Sesión bloqueada.");
+  async function logout() {
+    if(sb) await sb.auth.signOut(); currentUser=null;sessionStorage.removeItem(SESSION);
+    $("dashboard").classList.add("hidden");$("lockScreen").classList.remove("hidden");$("lockBtn").classList.add("hidden");setupAuth();toast("Sesión cerrada.");
   }
   function rollover() {
     const now=todayKey();
@@ -250,6 +254,7 @@
   $("progressRange").onchange=renderProgress;
   $("saveWeightBtn").onclick=()=>{const weight=Number($("bodyWeight").value),date=$("bodyMeasureDate").value||todayKey();if(!weight||weight<20||weight>300){toast("Ingrese un peso válido.");return;}data.weights=data.weights.filter(x=>x.date!==date);data.weights.push({date,weight});data.weights.sort((a,b)=>a.date.localeCompare(b.date));persist();renderProgress();toast("Medición guardada.");};
   $("exportBtn").onclick=()=>{const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=`club-5am-respaldo-${todayKey()}.json`;a.click();URL.revokeObjectURL(url);};
+  $("importBtn").onclick=async()=>{const file=$("importFile").files[0];if(!file){toast("Seleccione un archivo JSON.");return;}if(!sb||!currentUser){toast("Inicie sesión primero.");return;}if(!confirm("¿Reemplazar los datos de su cuenta por este respaldo? Exporte primero una copia."))return;try{const x=JSON.parse(await file.text());if(!x||!x.days||!x.settings)throw Error("invalid");data=x;if(!data.books)data.books=defaultData().books;if(!data.schedule)data.schedule={};if(!data.weights)data.weights=[];const {error}=await sb.from("user_state").upsert({user_id:currentUser.id,payload:data,updated_at:new Date().toISOString()},{onConflict:"user_id"});if(error)throw error;localStorage.setItem(STORE,JSON.stringify(data));renderToday();renderProgress();renderHistory();renderSchedule();renderPlanEditor();renderBooks();toast("Respaldo importado y sincronizado.");}catch(e){toast("No se pudo importar. Verifique que sea un respaldo JSON válido.");}};
   $("scheduleDate").value=todayKey();
   $("scheduleDate").onchange=renderSchedule;
   $("assignWorkoutBtn").onclick=()=>{const date=$("scheduleDate").value;if(!date){toast("Seleccione una fecha.");return;}const id=$("scheduleWorkout").value;if(id==="__rest__")data.schedule[date]="__rest__";else data.schedule[date]=id;persist();renderSchedule();if(date===todayKey())renderToday();renderProgress();toast("Planificación actualizada.");};
@@ -262,12 +267,12 @@
   $("createPlanBtn").onclick=()=>{const name=$("newPlanName").value.trim();if(!name){toast("Escriba un nombre para la rutina.");return;}const id="custom-"+Date.now();data.plans[id]={id,name,exercises:[]};$("newPlanName").value="";persist();renderPlanEditor();renderSchedule();$("planEditorSelect").value=id;renderPlanEditor();toast("Rutina nueva creada. Agregue ejercicios desde el editor.");};
   $("addBookBtn").onclick=()=>{const title=$("newBookTitle").value.trim();const author=$("newBookAuthor").value.trim();if(!title){toast("Escriba el título del libro.");return;}if(data.books.some(b=>b.title.toLowerCase()===title.toLowerCase()&&(b.author||"").toLowerCase()===author.toLowerCase())){toast("Ese libro ya está en la biblioteca.");return;}data.books.push({title,author});$("newBookTitle").value="";$("newBookAuthor").value="";persist();renderBooks();renderToday();toast("Libro agregado a la biblioteca.");};
   $("saveSettingsBtn").onclick=()=>{for(const k of ["startDate","targetDate","wakeGoal","morningActivation"])data.settings[k]=$(k).value;data.settings.meditationMinutes=Number($("meditationMinutes").value)||10;data.settings.readingMinutes=Number($("readingMinutes").value)||10;persist();renderToday();toast("Ajustes guardados.");};
-  $("changePasswordBtn").onclick=()=>{toast("Las credenciales de este prototipo se configuran en app.js. Para seguridad real, use autenticación de servidor.");};
+  $("changePasswordBtn").onclick=()=>{toast("Use la recuperación de contraseña de Supabase Auth o administre la cuenta desde el panel Supabase.");};
   $("clearDataBtn").onclick=()=>{if(confirm("¿Eliminar todos los entrenamientos, estadísticas y mediciones guardadas en este navegador? Esta acción no se puede deshacer.")){data=defaultData();persist();renderToday();renderProgress();renderHistory();fillSettings();toast("Registros eliminados.");}};
   $("lockBtn").onclick=logout;
   document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>switchView(t.dataset.view));
   // The page checks the date on every load. For a static site, it cannot run while the browser is closed;
   // missed calendar days are marked on the next visit, without inventing workout completions.
   setupAuth();
-  if(isAuthed())showApp();
+  if(sb) sb.auth.getSession().then(async({data:sd})=>{if(sd.session){currentUser=sd.session.user;await loadRemoteData();showApp();}});
 })();
